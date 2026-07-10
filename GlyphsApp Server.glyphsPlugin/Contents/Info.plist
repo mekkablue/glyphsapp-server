@@ -25,7 +25,9 @@
 	<key>NSPrincipalClass</key>
 	<string>GlyphsAppServer</string>
 	<key>PyMainFileNames</key>
-	<string>../MacOS/main.py</string>
+	<array>
+		<string>plugin.py</string>
+	</array>
 	<key>productPageURL</key>
 	<string>https://github.com/mekkablue/glyphsapp-server</string>
 </dict>

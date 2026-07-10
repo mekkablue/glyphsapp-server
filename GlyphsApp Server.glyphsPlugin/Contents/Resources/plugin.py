@@ -13,18 +13,22 @@ from __future__ import division, print_function, unicode_literals
 #
 #   Read the docs:
 #   https://github.com/mekkablue/glyphsapp-server
-#   https://github.com/schriftgestalt/GlyphsSDK/tree/master/Python%20Templates/General%20Plugin
 #
 ###########################################################################################################
 
 import threading
 
 import objc
-from AppKit import NSMenuItem
+from AppKit import NSMenuItem, NSApplication, NSPasteboard, NSPasteboardTypeString, NSOnState, NSOffState
 from Foundation import NSObject
 
-from GlyphsApp import Glyphs, Message
+from GlyphsApp import Glyphs
 from GlyphsApp.plugins import GeneralPlugin
+
+try:
+	from GlyphsApp import EDIT_MENU
+except ImportError:  # fall back to the fixed index of the Edit menu
+	EDIT_MENU = 2
 
 # Python 3 (Glyphs 3) ships the modern http.server module:
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -40,6 +44,13 @@ PORT_PREF = "com.mekkablue.GlyphsAppServer.port"
 
 # Serialises access to the main thread so concurrent requests do not clobber each other’s result.
 dispatchLock = threading.Lock()
+
+
+def setClipboard(text):
+	"""Copies a string to the general pasteboard."""
+	pasteboard = NSPasteboard.generalPasteboard()
+	pasteboard.clearContents()
+	pasteboard.setString_forType_(text, NSPasteboardTypeString)
 
 
 class MainThreadDispatcher(NSObject):
@@ -59,6 +70,8 @@ class MainThreadDispatcher(NSObject):
 			return
 		try:
 			font.newTab(str(text))
+			# bring Glyphs to the front so the new tab is visible:
+			NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
 			self.ok = True
 			self.message = "Opened new tab: %s" % text
 		except Exception as e:  # noqa: E722
@@ -74,26 +87,30 @@ def makeHandler(dispatcher):
 
 		def do_GET(self):
 			parsed = urlparse(self.path)
-			path = unquote(parsed.path)
-			parts = [p for p in path.split("/") if p]
+			# NB: route on the *raw* (still percent-encoded) path. If we decoded
+			# first, an encoded slash (%2F) in the text — e.g. "A/A.ss01 BC" —
+			# would be mistaken for a path separator. So we split the encoded
+			# path, then decode only the text segment.
+			rawParts = [p for p in parsed.path.split("/") if p]
 
 			# health check / discovery:
-			if not parts:
+			if not rawParts:
 				self.respond(200, "GlyphsApp Server is running.")
 				return
 
 			# expected: /<fontSelector>/<command>/<payload…>
-			if len(parts) >= 2 and parts[0] == "frontmostfont" and parts[1] == "newtab":
-				# text may come from the path remainder or from a ?text= query:
+			if len(rawParts) >= 2 and rawParts[0] == "frontmostfont" and rawParts[1] == "newtab":
+				# text may come from the path remainder or from a ?text= query;
+				# both are URL-decoded here, so %2F becomes a literal slash:
 				query = parse_qs(parsed.query)
 				if "text" in query:
 					text = query["text"][0]
 				else:
-					text = "/".join(parts[2:])
+					text = unquote("/".join(rawParts[2:]))
 				self.openTab(text)
 				return
 
-			self.respond(404, "Unknown command: %s" % path)
+			self.respond(404, "Unknown command: %s" % unquote(parsed.path))
 
 		def do_OPTIONS(self):
 			# CORS preflight for fetch() calls from https pages:
@@ -141,16 +158,20 @@ class GlyphsAppServer(GeneralPlugin):
 		})
 		self.httpd = None
 		self.thread = None
+		self.menuItem = None
 		self.dispatcher = MainThreadDispatcher.alloc().init()
 
 	@objc.python_method
 	def start(self):
+		self.startServer()
 		try:
-			menuItem = NSMenuItem(self.name, self.showStatus_)
-			Glyphs.menu[3].append(menuItem)  # 3 == Edit menu
+			self.menuItem = NSMenuItem(self.menuTitle(), self.copyLink_)
+			# a checkmark next to the item indicates that the server is running:
+			self.menuItem.setState_(NSOnState if self.httpd is not None else NSOffState)
+			self.menuItem.setToolTip_("Select to copy an example link to the clipboard.")
+			Glyphs.menu[EDIT_MENU].append(self.menuItem)
 		except Exception as e:  # noqa: E722
 			print("GlyphsApp Server: could not add menu item: %s" % e)
-		self.startServer()
 
 	@objc.python_method
 	def port(self):
@@ -159,6 +180,16 @@ class GlyphsAppServer(GeneralPlugin):
 			return int(port)
 		except (TypeError, ValueError):
 			return DEFAULT_PORT
+
+	@objc.python_method
+	def exampleLink(self):
+		return "http://127.0.0.1:%i/frontmostfont/newtab/ABC" % self.port()
+
+	@objc.python_method
+	def menuTitle(self):
+		if self.httpd is not None:
+			return "%s: Running on Port %i" % (self.name, self.port())
+		return "%s: Not Running" % self.name
 
 	@objc.python_method
 	def startServer(self):
@@ -185,17 +216,10 @@ class GlyphsAppServer(GeneralPlugin):
 			self.httpd = None
 			self.thread = None
 
-	def showStatus_(self, sender):
-		if self.httpd is not None:
-			Message(
-				title="GlyphsApp Server",
-				message="Listening on http://127.0.0.1:%i/\n\nExample link:\nhttp://127.0.0.1:%i/frontmostfont/newtab/ABC" % (self.port(), self.port()),
-			)
-		else:
-			Message(
-				title="GlyphsApp Server",
-				message="The server is not running. See the Macro window for details.",
-			)
+	def copyLink_(self, sender):
+		link = self.exampleLink()
+		setClipboard(link)
+		Glyphs.showNotification("GlyphsApp Server", "Copied to clipboard:\n%s" % link)
 
 	@objc.python_method
 	def __del__(self):

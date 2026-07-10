@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>GlyphsApp Server – demo</title>
+<style>
+	body { font: 16px/1.5 -apple-system, system-ui, sans-serif; max-width: 40em; margin: 3em auto; padding: 0 1em; }
+	code { background: #f2f2f2; padding: .1em .3em; border-radius: 4px; }
+	a.glyphlink { display: inline-block; margin: .2em .3em .2em 0; padding: .3em .7em; background: #222; color: #fff; text-decoration: none; border-radius: 6px; }
+	a.glyphlink:hover { background: #000; }
+	#status { color: #888; }
+</style>
+</head>
+<body>
+	<h1>GlyphsApp Server</h1>
+	<p>Make sure Glyphs is running with a font open, then click a link below to open an Edit tab.</p>
+
+	<!--
+		Two ways to trigger the server:
+		1. A plain link that navigates to the server (it answers, nothing else happens).
+		2. A fetch() call so the page does not navigate at all (nicer). See openTab() below.
+	-->
+
+	<p>
+		<a class="glyphlink" href="#" onclick="openTab('ABC'); return false;">ABC</a>
+		<a class="glyphlink" href="#" onclick="openTab('Hamburgevons'); return false;">Hamburgevons</a>
+		<a class="glyphlink" href="#" onclick="openTab('/a /b /c'); return false;">/a /b /c</a>
+	</p>
+
+	<p>Or as a bare link (opens the server response in the browser):<br>
+		<a href="http://127.0.0.1:49152/frontmostfont/newtab/ABC">http://127.0.0.1:49152/frontmostfont/newtab/ABC</a>
+	</p>
+
+	<p id="status"></p>
+
+<script>
+	const PORT = 49152;
+
+	function openTab(text) {
+		const url = "http://127.0.0.1:" + PORT + "/frontmostfont/newtab/?text=" + encodeURIComponent(text);
+		fetch(url)
+			.then(r => r.text())
+			.then(msg => { document.getElementById("status").textContent = msg; })
+			.catch(() => { document.getElementById("status").textContent = "Could not reach GlyphsApp Server. Is Glyphs running with the plugin installed?"; });
+	}
+</script>
+</body>
+</html>

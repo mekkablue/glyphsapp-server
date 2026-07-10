@@ -25,10 +25,12 @@
 		<a class="glyphlink" href="#" onclick="openTab('ABC'); return false;">ABC</a>
 		<a class="glyphlink" href="#" onclick="openTab('Hamburgevons'); return false;">Hamburgevons</a>
 		<a class="glyphlink" href="#" onclick="openTab('/a /b /c'); return false;">/a /b /c</a>
+		<a class="glyphlink" href="#" onclick="openTab('A/A.ss01 BC'); return false;">A/A.ss01 BC</a>
 	</p>
 
-	<p>Or as a bare link (opens the server response in the browser):<br>
-		<a href="http://127.0.0.1:49152/frontmostfont/newtab/ABC">http://127.0.0.1:49152/frontmostfont/newtab/ABC</a>
+	<p>Or as bare links (open the server response in the browser). Note the encoded slash <code>%2F</code>:<br>
+		<a href="http://127.0.0.1:49152/frontmostfont/newtab/ABC">http://127.0.0.1:49152/frontmostfont/newtab/ABC</a><br>
+		<a href="http://127.0.0.1:49152/frontmostfont/newtab/A%2FA.ss01%20BC">http://127.0.0.1:49152/frontmostfont/newtab/A%2FA.ss01%20BC</a>
 	</p>
 
 	<p id="status"></p>

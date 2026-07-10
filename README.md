@@ -34,7 +34,9 @@ The server binds to `127.0.0.1` only, so it is reachable from your own machine, 
 2. Restart Glyphs.
 3. Open a font. The server starts automatically and listens on port `49152`.
 
-You can confirm it is running via **Edit → GlyphsApp Server**, which shows the current address, and by the line it prints to the Macro window on launch:
+There is an item in the **Edit** menu, **GlyphsApp Server**, whose title shows whether the server is running and on which port (`Running on Port 49152` with a checkmark, or `Not Running`). Selecting it copies an example link (`http://127.0.0.1:49152/frontmostfont/newtab/ABC`) to the clipboard.
+
+You can also confirm it is running by the line it prints to the Macro window on launch:
 
 ```
 GlyphsApp Server: listening on http://127.0.0.1:49152/
@@ -50,15 +52,15 @@ http://127.0.0.1:<port>/frontmostfont/newtab/<text>
 
 - `frontmostfont` — the font selector. Currently only the frontmost font is supported.
 - `newtab` — the command. Opens a new Edit tab.
-- `<text>` — the glyphs/characters to show. URL‑encode anything special.
+- `<text>` — the glyphs/characters to show. URL‑encode anything special. In particular, encode a literal slash as `%2F` and a space as `%20`, so a string such as `A/A.ss01 BC` is sent as `A%2FA.ss01%20BC`.
 
-The text can also be passed as a query parameter, which is more robust for strings containing slashes or spaces:
+The text can also be passed as a query parameter, which is often the most convenient form:
 
 ```
-http://127.0.0.1:49152/frontmostfont/newtab/?text=Hamburgevons
+http://127.0.0.1:49152/frontmostfont/newtab/?text=A%2FA.ss01%20BC
 ```
 
-Both plain characters (`ABC`) and Glyphs’ slash notation (`/a /b /c`) work, exactly as if you had typed them into the tab’s text field.
+Both plain characters (`ABC`) and Glyphs’ slash notation (`/a /b /c`, or a mix like `A/A.ss01 BC`) work, exactly as if you had typed them into the tab’s text field. When Glyphs opens the tab, the app is also brought to the foreground.
 
 ### From a plain link
 
@@ -91,7 +93,8 @@ Glyphs.defaults["com.mekkablue.GlyphsAppServer.port"] = 50000
 ## How it works
 
 - On `start()`, the plug‑in launches a threaded `HTTPServer` bound to `127.0.0.1` on a background thread.
-- Incoming requests are parsed on that background thread, then the actual Glyphs work (`font.newTab(text)`) is dispatched to the **main thread** via `performSelectorOnMainThread_…`, because the Glyphs API is not thread‑safe.
+- Incoming requests are parsed on that background thread, then the actual Glyphs work (`font.newTab(text)`) is dispatched to the **main thread** via `performSelectorOnMainThread_…`, because the Glyphs API is not thread‑safe. Opening a tab also activates Glyphs (`NSApplication.activateIgnoringOtherApps_`) so it comes to the front.
+- Routing happens on the raw, still‑percent‑encoded path, and only the text segment is URL‑decoded afterwards — that is what lets an encoded slash (`%2F`) survive as a literal character in the text instead of being read as a path separator.
 - The server replies with a short `text/plain` message (and permissive CORS headers, so `fetch()` from local proofing pages works).
 
 The bundle follows the standard Glyphs Python‑plugin layout:

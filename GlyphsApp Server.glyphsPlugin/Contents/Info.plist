@@ -4,8 +4,10 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
+	<key>CFBundleDisplayName</key>
+	<string>GlyphsApp Server</string>
 	<key>CFBundleExecutable</key>
-	<string>GlyphsAppServer</string>
+	<string>plugin</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.mekkablue.GlyphsAppServer</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -16,13 +18,15 @@
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Rainer Erich Scheichelbauer (mekkablue). Apache License 2.0.</string>
 	<key>NSPrincipalClass</key>
 	<string>GlyphsAppServer</string>
+	<key>PyMainFileNames</key>
+	<string>../MacOS/main.py</string>
+	<key>productPageURL</key>
+	<string>https://github.com/mekkablue/glyphsapp-server</string>
 </dict>
 </plist>

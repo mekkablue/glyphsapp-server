@@ -94,6 +94,22 @@ Glyphs.defaults["com.mekkablue.GlyphsAppServer.port"] = 50000
 - Incoming requests are parsed on that background thread, then the actual Glyphs work (`font.newTab(text)`) is dispatched to the **main thread** via `performSelectorOnMainThread_…`, because the Glyphs API is not thread‑safe.
 - The server replies with a short `text/plain` message (and permissive CORS headers, so `fetch()` from local proofing pages works).
 
+The bundle follows the [GlyphsSDK General Plugin](https://github.com/schriftgestalt/GlyphsSDK/tree/master/Python%20Templates/General%20Plugin) layout:
+
+```
+GlyphsApp Server.glyphsPlugin/
+└── Contents/
+    ├── Info.plist            NSPrincipalClass = GlyphsAppServer, PyMainFileNames = ../MacOS/main.py
+    ├── PkgInfo               BNDL????
+    ├── MacOS/
+    │   ├── plugin            generic SDK launcher (CFBundleExecutable)
+    │   └── main.py           bootstrap: exec()s Resources/plugin.py
+    └── Resources/
+        └── plugin.py         the plug‑in itself
+```
+
+The `MacOS/plugin` launcher is the unmodified loader from the SDK; it must be present (and executable) or Glyphs reports *“its executable couldn’t be located.”*
+
 ## Endpoints
 
 | Method | Path                                   | Effect                                             |

@@ -94,21 +94,20 @@ Glyphs.defaults["com.mekkablue.GlyphsAppServer.port"] = 50000
 - Incoming requests are parsed on that background thread, then the actual Glyphs work (`font.newTab(text)`) is dispatched to the **main thread** via `performSelectorOnMainThread_…`, because the Glyphs API is not thread‑safe.
 - The server replies with a short `text/plain` message (and permissive CORS headers, so `fetch()` from local proofing pages works).
 
-The bundle follows the [GlyphsSDK General Plugin](https://github.com/schriftgestalt/GlyphsSDK/tree/master/Python%20Templates/General%20Plugin) layout:
+The bundle follows the standard Glyphs Python‑plugin layout:
 
 ```
 GlyphsApp Server.glyphsPlugin/
 └── Contents/
-    ├── Info.plist            NSPrincipalClass = GlyphsAppServer, PyMainFileNames = ../MacOS/main.py
+    ├── Info.plist            NSPrincipalClass = GlyphsAppServer, PyMainFileNames = [plugin.py]
     ├── PkgInfo               BNDL????
     ├── MacOS/
-    │   ├── plugin            generic SDK launcher (CFBundleExecutable)
-    │   └── main.py           bootstrap: exec()s Resources/plugin.py
+    │   └── plugin            generic universal (arm64 + x86_64) Python loader (CFBundleExecutable)
     └── Resources/
         └── plugin.py         the plug‑in itself
 ```
 
-The `MacOS/plugin` launcher is the unmodified loader from the SDK; it must be present (and executable) or Glyphs reports *“its executable couldn’t be located.”*
+`MacOS/plugin` is the generic py2app loader shared by every Glyphs Python plugin. It reads `PyMainFileNames` from `Info.plist` and runs `Resources/plugin.py` directly (no separate `main.py` bootstrap). It must be present, executable, and **universal** — a loader lacking an `arm64` slice makes Glyphs on Apple Silicon report *“it doesn’t contain a version for the current architecture,”* and a missing loader makes it report *“its executable couldn’t be located.”*
 
 ## Endpoints
 

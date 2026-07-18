@@ -62,6 +62,17 @@ http://127.0.0.1:49152/frontmostfont/newtab/?text=A%2FA.ss01%20BC
 
 Both plain characters (`ABC`) and Glyphs’ slash notation (`/a /b /c`, or a mix like `A/A.ss01 BC`) work, exactly as if you had typed them into the tab’s text field. When Glyphs opens the tab, the app is also brought to the foreground.
 
+### Zoom
+
+Add an optional `zoom` query parameter to set the tab’s zoom level. The value is per mille of the natural scale: `zoom=1000` corresponds to `tab.scale = 1.0`, `zoom=200` to `tab.scale = 0.2`, `zoom=2000` to `tab.scale = 2.0` (i.e. the value is divided by 1000).
+
+```
+http://127.0.0.1:49152/frontmostfont/newtab/ABC?zoom=200
+http://127.0.0.1:49152/frontmostfont/newtab/?text=A%2FA.ss01%20BC&zoom=200
+```
+
+If `zoom` is omitted, the tab opens at its default zoom. A non‑numeric or non‑positive value is rejected with a `400` response.
+
 ### From a plain link
 
 ```html
@@ -119,6 +130,8 @@ GlyphsApp Server.glyphsPlugin/
 | `GET`  | `/`                                    | Health check — returns a “running” message.        |
 | `GET`  | `/frontmostfont/newtab/<text>`         | Opens a new tab with `<text>` in the frontmost font. |
 | `GET`  | `/frontmostfont/newtab/?text=<text>`   | Same, with the text as a query parameter.          |
+
+Both `newtab` forms accept an optional `zoom` query parameter (`?zoom=200`) that sets the tab scale to the value divided by 1000 (`zoom=1000` → `scale=1.0`).
 
 ## Requirements
 

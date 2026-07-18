@@ -61,19 +61,28 @@ class MainThreadDispatcher(NSObject):
 	reads the outcome back from `ok` and `message` once it has finished.
 	"""
 
-	def openTab_(self, text):
+	def openTab_(self, info):
 		self.ok = False
 		self.message = ""
 		font = Glyphs.font
 		if font is None:
 			self.message = "No font open in Glyphs."
 			return
+		# `info` crosses the thread boundary as an NSDictionary, so index it
+		# rather than relying on dict methods:
+		text = info["text"]
+		zoom = info["zoom"] if "zoom" in info else None
 		try:
 			font.newTab(str(text))
+			# a zoom of 1000 corresponds to tab.scale = 1.0:
+			if zoom is not None:
+				font.currentTab.scale = zoom / 1000.0
 			# bring Glyphs to the front so the new tab is visible:
 			NSApplication.sharedApplication().activateIgnoringOtherApps_(True)
 			self.ok = True
 			self.message = "Opened new tab: %s" % text
+			if zoom is not None:
+				self.message += " (zoom %g)" % zoom
 		except Exception as e:  # noqa: E722
 			self.message = "Could not open tab: %s" % e
 
@@ -107,7 +116,20 @@ def makeHandler(dispatcher):
 					text = query["text"][0]
 				else:
 					text = unquote("/".join(rawParts[2:]))
-				self.openTab(text)
+
+				# optional ?zoom= — 1000 means tab.scale = 1.0:
+				zoom = None
+				if "zoom" in query:
+					try:
+						zoom = float(query["zoom"][0])
+					except ValueError:
+						self.respond(400, "Invalid zoom value: %s" % query["zoom"][0])
+						return
+					if not (zoom > 0) or zoom == float("inf"):  # rejects NaN and infinity too
+						self.respond(400, "Zoom must be a positive number, got: %s" % query["zoom"][0])
+						return
+
+				self.openTab(text, zoom)
 				return
 
 			self.respond(404, "Unknown command: %s" % unquote(parsed.path))
@@ -120,9 +142,12 @@ def makeHandler(dispatcher):
 
 		# ---- actions ---------------------------------------------------------
 
-		def openTab(self, text):
+		def openTab(self, text, zoom=None):
+			info = {"text": text}
+			if zoom is not None:
+				info["zoom"] = zoom
 			with dispatchLock:
-				dispatcher.performSelectorOnMainThread_withObject_waitUntilDone_("openTab:", text, True)
+				dispatcher.performSelectorOnMainThread_withObject_waitUntilDone_("openTab:", info, True)
 				ok, message = dispatcher.ok, dispatcher.message
 			self.respond(200 if ok else 500, message)
 
